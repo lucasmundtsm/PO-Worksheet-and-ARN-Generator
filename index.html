@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PO Upload ARN Processor</title>
+    <title>PO Upload ARN Processor - Multi-File Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
@@ -50,6 +50,17 @@
             font-size: 1.2rem;
             color: #b0c4de;
             font-weight: 400;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+            color: #000000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-left: 10px;
         }
 
         .upload-section {
@@ -121,6 +132,50 @@
             color: #ffffff;
         }
 
+        .multi-file-notice {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #4ade80;
+        }
+
+        .file-list {
+            margin-top: 15px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            background: rgba(74, 222, 128, 0.15);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            color: #4ade80;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item .vendor-code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+
+        .remove-file {
+            cursor: pointer;
+            color: #f87171;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+
         .file-info {
             margin-top: 15px;
             padding: 10px;
@@ -154,6 +209,35 @@
 
         .instructions li {
             margin-bottom: 8px;
+        }
+
+        .vendor-codes-table {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .vendor-codes-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .vendor-codes-table th,
+        .vendor-codes-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .vendor-codes-table th {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .vendor-codes-table td {
+            color: #b0c4de;
         }
 
         .process-section {
@@ -340,34 +424,34 @@
 <body>
     <div class="container">
         <header class="header">
-            <h1 class="title">PO ARN Processor</h1>
-            <p class="subtitle">Match Purchase Orders with Amazon Reference Numbers based on warehouse location</p>
+            <h1 class="title">PO ARN Processor </h1>
+            <p class="subtitle">Match Purchase Orders with Amazon Reference Numbers using multiple shipment files and vendor codes</p>
         </header>
 
         <div class="instructions">
             <h3>📋 Instructions</h3>
             <ul>
-                <li>Upload your <strong>PO Upload Processed Excel file</strong> (contains purchase order data from Amazon)</li>
-                <li>Upload your <strong>Shipments CSV file</strong> (contains ARN and warehouse shipping data)</li>
-                <li>The tool will match PO numbers with warehouse locations to assign correct ARNs</li>
-                <li>Processing logic:
+                <li>Upload your <strong>PO Upload Processed Excel file</strong> (contains purchase order data with vendor codes)</li>
+                <li>Upload <strong>multiple Shipments CSV files</strong> (can select multiple files at once or drag & drop multiple files)</li>
+                <li>The tool will match based on:
                     <ul style="margin-top: 5px; list-style-type: disc; margin-left: 20px;">
-                        <li><strong>UNIS Warehouse:</strong> Matches "UNIS Fulfillment" shipments with "UNIS" PO warehouse</li>
-                        <li><strong>Encore Warehouse:</strong> Matches "Encore" shipments with "Encore" PO warehouse</li>
-                        <li><strong>Split POs:</strong> Same PO number gets different ARNs based on warehouse location</li>
-                        <li><strong>Unmatched items:</strong> Show as "No ARN Found"</li>
+                        <li><strong>Order/PO Number</strong> - Must match exactly</li>
+                        <li><strong>Fulfillment Center</strong> - Matches FC codes from shipments</li>
+                        <li><strong>Vendor Code</strong> - Matches channel-specific vendor codes</li>
+                        <li><strong>PO Warehouse Final</strong> - Matches with Ship from location (Encore/UNIS)</li>
                     </ul>
                 </li>
+                <li>The tool handles multiple Amazon channels with same PO numbers going to same FC from different warehouses</li>
                 <li>Download the processed Excel file with ARN column added to all accept sheets</li>
             </ul>
-        </div>
+            
 
         <div class="upload-section">
             <div class="upload-area" id="poUploadArea">
                 <div class="upload-icon">📊</div>
                 <div class="upload-text">
                     <strong>PO Upload Processed File</strong><br>
-                    Excel file (.xlsx) with accept, accept encore, accept unis sheets
+                    Excel file (.xlsx) with vendor codes & warehouse data
                 </div>
                 <button class="upload-btn" onclick="document.getElementById('poFile').click()">Choose PO Upload File...</button>
                 <input type="file" id="poFile" class="file-input" accept=".xlsx,.xls">
@@ -377,12 +461,13 @@
             <div class="upload-area" id="shipmentsUploadArea">
                 <div class="upload-icon">🚚</div>
                 <div class="upload-text">
-                    <strong>Shipments File</strong><br>
-                    CSV file with ARN and warehouse shipping data
+                    <strong>Shipment Files</strong><br>
+                    Multiple CSV files with ARN and shipping data
                 </div>
-                <button class="upload-btn" onclick="document.getElementById('shipmentsFile').click()">Choose Shipments CSV...</button>
-                <input type="file" id="shipmentsFile" class="file-input" accept=".csv">
-                <div class="file-info" id="shipmentsFileInfo"></div>
+                <button class="upload-btn" onclick="document.getElementById('shipmentsFiles').click()">Choose Shipment Files...</button>
+                <input type="file" id="shipmentsFiles" class="file-input" accept=".csv" multiple>
+                <div class="multi-file-notice">💡 You can select multiple CSV files at once</div>
+                <div class="file-list" id="shipmentsFileList"></div>
             </div>
         </div>
 
@@ -416,13 +501,21 @@
     </div>
 
     <script>
+        // Vendor code mappings
+        const VENDOR_CODES = {
+            'PT71U': 'Canada Kitchen',
+            'HG8BU': 'Canada DI',
+            'C132E': 'Fanshop',
+            'TZ7HI': 'Mexico'
+        };
+
         let poWorkbook = null;
-        let shipmentsData = null;
+        let shipmentsDataSets = [];
         let processedData = null;
 
         // File upload handling
         document.getElementById('poFile').addEventListener('change', handlePOFile);
-        document.getElementById('shipmentsFile').addEventListener('change', handleShipmentsFile);
+        document.getElementById('shipmentsFiles').addEventListener('change', handleShipmentsFiles);
 
         // Drag and drop handling
         ['poUploadArea', 'shipmentsUploadArea'].forEach(id => {
@@ -441,11 +534,15 @@
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     if (id === 'poUploadArea') {
-                        document.getElementById('poFile').files = files;
-                        handlePOFile({ target: { files } });
+                        // Only accept first file for PO Upload
+                        const dt = new DataTransfer();
+                        dt.items.add(files[0]);
+                        document.getElementById('poFile').files = dt.files;
+                        handlePOFile({ target: { files: dt.files } });
                     } else {
-                        document.getElementById('shipmentsFile').files = files;
-                        handleShipmentsFile({ target: { files } });
+                        // Accept multiple files for shipments
+                        document.getElementById('shipmentsFiles').files = files;
+                        handleShipmentsFiles({ target: { files } });
                     }
                 }
             });
@@ -477,40 +574,87 @@
             reader.readAsBinaryString(file);
         }
 
-        function handleShipmentsFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        function handleShipmentsFiles(event) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
 
-            if (!file.name.endsWith('.csv')) {
-                showError('Please select a CSV file');
-                return;
-            }
+            // Clear previous shipments data
+            shipmentsDataSets = [];
+            const fileList = document.getElementById('shipmentsFileList');
+            fileList.innerHTML = '';
+            
+            let filesProcessed = 0;
+            const totalFiles = files.length;
 
-            const fileInfo = document.getElementById('shipmentsFileInfo');
-            fileInfo.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
-            fileInfo.style.display = 'block';
-
-            Papa.parse(file, {
-                header: true,
-                complete: function(results) {
-                    try {
-                        shipmentsData = results.data;
-                        checkReadyToProcess();
-                        hideError();
-                    } catch (error) {
-                        showError('Error reading CSV file: ' + error.message);
-                    }
-                },
-                error: function(error) {
-                    showError('Error parsing CSV file: ' + error.message);
+            files.forEach((file, index) => {
+                if (!file.name.endsWith('.csv')) {
+                    showError(`File ${file.name} is not a CSV file`);
+                    return;
                 }
+
+                // Create file item display
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${file.name} (${(file.size / 1024).toFixed(2)} KB)</span>
+                    <span class="remove-file" onclick="removeShipmentFile(${index})" title="Remove">×</span>
+                `;
+                fileList.appendChild(fileItem);
+
+                // Parse CSV file
+                Papa.parse(file, {
+                    header: true,
+                    complete: function(results) {
+                        try {
+                            shipmentsDataSets.push({
+                                filename: file.name,
+                                data: results.data
+                            });
+                            
+                            filesProcessed++;
+                            if (filesProcessed === totalFiles) {
+                                checkReadyToProcess();
+                                hideError();
+                                showSuccess(`Loaded ${totalFiles} shipment file(s) successfully`);
+                            }
+                        } catch (error) {
+                            showError(`Error reading ${file.name}: ${error.message}`);
+                        }
+                    },
+                    error: function(error) {
+                        showError(`Error parsing ${file.name}: ${error.message}`);
+                    }
+                });
             });
+        }
+
+        function removeShipmentFile(index) {
+            shipmentsDataSets.splice(index, 1);
+            
+            // Refresh the file list display
+            const fileList = document.getElementById('shipmentsFileList');
+            fileList.innerHTML = '';
+            
+            shipmentsDataSets.forEach((dataset, idx) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${dataset.filename}</span>
+                    <span class="remove-file" onclick="removeShipmentFile(${idx})" title="Remove">×</span>
+                `;
+                fileList.appendChild(fileItem);
+            });
+            
+            checkReadyToProcess();
         }
 
         function checkReadyToProcess() {
             const processBtn = document.getElementById('processBtn');
-            if (poWorkbook && shipmentsData) {
+            if (poWorkbook && shipmentsDataSets.length > 0) {
                 processBtn.disabled = false;
+                processBtn.textContent = `Process Files & Generate ARN Data (${shipmentsDataSets.length} shipment file(s))`;
+            } else {
+                processBtn.disabled = true;
                 processBtn.textContent = 'Process Files & Generate ARN Data';
             }
         }
@@ -532,11 +676,19 @@
             successDiv.classList.add('active');
         }
 
-        function updateProgress(percentage, text) {
-            const progressSection = document.getElementById('progressSection');
-            progressSection.classList.add('active');
-            document.getElementById('progressFill').style.width = percentage + '%';
-            document.getElementById('progressText').textContent = text;
+        function detectVendorCode(shipmentData) {
+            // Try to detect vendor code from shipment data
+            // This could be enhanced based on actual data patterns
+            for (const row of shipmentData) {
+                for (const vendorCode of Object.keys(VENDOR_CODES)) {
+                    // Check if vendor code appears in any field
+                    const rowString = JSON.stringify(row).toUpperCase();
+                    if (rowString.includes(vendorCode)) {
+                        return vendorCode;
+                    }
+                }
+            }
+            return null;
         }
 
         function processFiles() {
@@ -545,54 +697,104 @@
                 document.getElementById('successMessage').classList.remove('active');
                 document.getElementById('resultsSection').classList.remove('active');
                 
-                updateProgress(10, 'Building warehouse-aware ARN lookup table...');
+                updateProgress(10, 'Building comprehensive ARN lookup table from multiple files...');
 
-                // Build ARN lookup from shipments data with warehouse matching
+                // Build comprehensive ARN lookup from all shipment files
                 const arnLookup = {};
-                let shipmentsProcessed = 0;
-                
-                shipmentsData.forEach(row => {
-                    const arn = row['Shipment ID (ARN)'];
-                    const poNumbers = row['Purchase orders'];
-                    const shipFrom = row['Ship from'];
+                let totalShipmentEntries = 0;
+                let fileStats = {};
+
+                shipmentsDataSets.forEach((dataset, fileIndex) => {
+                    const { filename, data } = dataset;
+                    fileStats[filename] = { processed: 0, entries: 0 };
                     
-                    if (arn && poNumbers && shipFrom) {
-                        // Determine warehouse from Ship from field
-                        let warehouse = '';
-                        if (shipFrom.toLowerCase().includes('unis fulfillment')) {
-                            warehouse = 'UNIS';
-                        } else if (shipFrom.toLowerCase().includes('encore')) {
-                            warehouse = 'Encore';
-                        }
-                        
-                        if (warehouse) {
+                    updateProgress(10 + (fileIndex * 10), `Processing ${filename}...`);
+
+                    data.forEach(row => {
+                        // Extract relevant fields (adjust column names as needed)
+                        const arn = row['Shipment ID (ARN)'] || row['ARN'] || row['Shipment ID'];
+                        const poNumbers = row['Purchase orders'] || row['POs'] || row['PO Numbers'];
+                        const shipFrom = row['Ship from'] || row['Warehouse'] || row['Ship From'];
+                        const shipTo = row['Ship to FC'] || row['Fulfillment Center'] || row['FC'] || row['Destination'];
+                        const vendorCode = row['Vendor Code'] || row['Vendor'] || row['Seller'] || '';
+
+                        if (arn && poNumbers) {
+                            // Determine warehouse from Ship from field
+                            let warehouse = '';
+                            if (shipFrom) {
+                                if (shipFrom.toLowerCase().includes('unis')) {
+                                    warehouse = 'UNIS';
+                                } else if (shipFrom.toLowerCase().includes('encore')) {
+                                    warehouse = 'Encore';
+                                }
+                            }
+
+                            // Extract FC code (usually format like YYZ4, YVR2, etc.)
+                            let fcCode = '';
+                            if (shipTo) {
+                                // Extract alphanumeric FC codes (e.g., YYZ4 from "YYZ4 - Toronto")
+                                const fcMatch = shipTo.match(/([A-Z]{3}\d+)/);
+                                if (fcMatch) {
+                                    fcCode = fcMatch[1];
+                                }
+                            }
+
                             // Handle comma-separated PO numbers
                             const pos = poNumbers.split(',').map(po => po.trim());
                             pos.forEach(po => {
                                 if (po) {
-                                    // Create composite key: PO_WAREHOUSE
-                                    const key = `${po}_${warehouse}`;
-                                    arnLookup[key] = arn;
-                                    shipmentsProcessed++;
+                                    // Create multiple lookup keys for comprehensive matching
+                                    // Key 1: PO_FC_VendorCode_Warehouse (most specific)
+                                    if (fcCode && vendorCode && warehouse) {
+                                        const key1 = `${po}_${fcCode}_${vendorCode}_${warehouse}`;
+                                        arnLookup[key1] = arn;
+                                    }
+                                    
+                                    // Key 2: PO_VendorCode_Warehouse (no FC)
+                                    if (vendorCode && warehouse) {
+                                        const key2 = `${po}_${vendorCode}_${warehouse}`;
+                                        arnLookup[key2] = arn;
+                                    }
+                                    
+                                    // Key 3: PO_FC_Warehouse (no vendor code)
+                                    if (fcCode && warehouse) {
+                                        const key3 = `${po}_${fcCode}_${warehouse}`;
+                                        arnLookup[key3] = arn;
+                                    }
+                                    
+                                    // Key 4: PO_Warehouse (fallback)
+                                    if (warehouse) {
+                                        const key4 = `${po}_${warehouse}`;
+                                        arnLookup[key4] = arn;
+                                    }
+                                    
+                                    totalShipmentEntries++;
+                                    fileStats[filename].entries++;
                                 }
                             });
+                            
+                            fileStats[filename].processed++;
                         }
-                    }
+                    });
                 });
 
-                console.log(`Built ARN lookup with ${Object.keys(arnLookup).length} PO-Warehouse combinations from ${shipmentsProcessed} shipment entries`);
+                console.log(`Built ARN lookup with ${Object.keys(arnLookup).length} unique keys from ${totalShipmentEntries} entries across ${shipmentsDataSets.length} files`);
 
-                updateProgress(30, 'Processing sheets with warehouse-aware matching...');
+                updateProgress(40, 'Processing PO Upload sheets with enhanced matching...');
 
                 const targetSheets = ['accept', 'accept encore', 'accept unis'];
                 const newWorkbook = XLSX.utils.book_new();
                 let totalProcessed = 0;
                 let totalMatched = 0;
                 let processedSheets = 0;
+                let vendorStats = {};
+                Object.keys(VENDOR_CODES).forEach(code => {
+                    vendorStats[code] = { processed: 0, matched: 0 };
+                });
                 let warehouseStats = { 'UNIS': { processed: 0, matched: 0 }, 'Encore': { processed: 0, matched: 0 } };
 
                 targetSheets.forEach((sheetName, index) => {
-                    updateProgress(30 + (index * 20), `Processing ${sheetName} sheet...`);
+                    updateProgress(40 + (index * 15), `Processing ${sheetName} sheet...`);
 
                     if (poWorkbook.SheetNames.includes(sheetName)) {
                         const worksheet = poWorkbook.Sheets[sheetName];
@@ -600,68 +802,111 @@
                         
                         if (data.length > 0) {
                             const headers = data[0];
-                            const arnPosition = 'first'; // Always first column
-                            const noMatchText = 'No ARN Found'; // Always use this text
                             
-                            // Add ARN header
-                            let newHeaders;
-                            if (arnPosition === 'first') {
-                                newHeaders = ['ARN', ...headers];
-                            } else {
-                                newHeaders = [...headers, 'ARN'];
-                            }
-
+                            // Add ARN header as first column
+                            const newHeaders = ['ARN', ...headers];
                             const newData = [newHeaders];
                             
                             // Find the required column indices
-                            const poNumberIndex = headers.indexOf('Order/PO Number');
-                            const warehouseIndex = headers.indexOf('PO Warehouse Final');
+                            const poNumberIndex = headers.findIndex(h => h && (
+                                h.includes('Order/PO Number') || 
+                                h.includes('PO Number') || 
+                                h === 'PO'
+                            ));
                             
+                            const warehouseIndex = headers.findIndex(h => h && (
+                                h.includes('PO Warehouse Final') || 
+                                h.includes('Warehouse') ||
+                                h === 'PO Warehouse'
+                            ));
+                            
+                            const fcIndex = headers.findIndex(h => h && (
+                                h.includes('Fulfillment Center') || 
+                                h.includes('FC') ||
+                                h === 'Ship to FC'
+                            ));
+                            
+                            const vendorCodeIndex = headers.findIndex(h => h && (
+                                h.includes('Vendor Code') || 
+                                h.includes('Vendor') ||
+                                h === 'Seller'
+                            ));
+
                             if (poNumberIndex === -1) {
-                                throw new Error(`'Order/PO Number' column not found in ${sheetName} sheet`);
-                            }
-                            if (warehouseIndex === -1) {
-                                throw new Error(`'PO Warehouse Final' column not found in ${sheetName} sheet`);
+                                throw new Error(`PO Number column not found in ${sheetName} sheet. Looking for 'Order/PO Number' or similar.`);
                             }
 
                             // Process data rows
                             for (let i = 1; i < data.length; i++) {
                                 const row = data[i];
                                 const poNumber = row[poNumberIndex];
-                                const warehouse = row[warehouseIndex];
-                                let arn = '';
-
-                                if (poNumber && warehouse) {
-                                    // Track warehouse statistics
-                                    if (warehouseStats[warehouse]) {
+                                const warehouse = warehouseIndex >= 0 ? row[warehouseIndex] : '';
+                                const fc = fcIndex >= 0 ? row[fcIndex] : '';
+                                const vendorCode = vendorCodeIndex >= 0 ? row[vendorCodeIndex] : '';
+                                
+                                let arn = 'No ARN Found';
+                                
+                                if (poNumber) {
+                                    // Track statistics
+                                    if (warehouse && warehouseStats[warehouse]) {
                                         warehouseStats[warehouse].processed++;
                                     }
-                                    
-                                    // Create composite key for warehouse-aware lookup
-                                    const lookupKey = `${poNumber}_${warehouse}`;
-                                    
-                                    if (arnLookup[lookupKey]) {
-                                        arn = arnLookup[lookupKey];
-                                        totalMatched++;
-                                        if (warehouseStats[warehouse]) {
-                                            warehouseStats[warehouse].matched++;
-                                        }
-                                    } else {
-                                        // If no match found, use the default text
-                                        arn = noMatchText || 'No ARN Found';
+                                    if (vendorCode && vendorStats[vendorCode]) {
+                                        vendorStats[vendorCode].processed++;
                                     }
-                                } else {
-                                    // If PO Number or Warehouse is missing, use default text
-                                    arn = noMatchText || 'No ARN Found';
+                                    
+                                    // Extract FC code if present
+                                    let fcCode = '';
+                                    if (fc) {
+                                        const fcMatch = fc.match(/([A-Z]{3}\d+)/);
+                                        if (fcMatch) {
+                                            fcCode = fcMatch[1];
+                                        }
+                                    }
+                                    
+                                    // Try multiple lookup strategies in order of specificity
+                                    const lookupKeys = [];
+                                    
+                                    // Most specific: all fields
+                                    if (fcCode && vendorCode && warehouse) {
+                                        lookupKeys.push(`${poNumber}_${fcCode}_${vendorCode}_${warehouse}`);
+                                    }
+                                    
+                                    // Without FC
+                                    if (vendorCode && warehouse) {
+                                        lookupKeys.push(`${poNumber}_${vendorCode}_${warehouse}`);
+                                    }
+                                    
+                                    // Without vendor code
+                                    if (fcCode && warehouse) {
+                                        lookupKeys.push(`${poNumber}_${fcCode}_${warehouse}`);
+                                    }
+                                    
+                                    // Just warehouse (fallback)
+                                    if (warehouse) {
+                                        lookupKeys.push(`${poNumber}_${warehouse}`);
+                                    }
+                                    
+                                    // Try each key until we find a match
+                                    for (const key of lookupKeys) {
+                                        if (arnLookup[key]) {
+                                            arn = arnLookup[key];
+                                            totalMatched++;
+                                            
+                                            // Update statistics
+                                            if (warehouse && warehouseStats[warehouse]) {
+                                                warehouseStats[warehouse].matched++;
+                                            }
+                                            if (vendorCode && vendorStats[vendorCode]) {
+                                                vendorStats[vendorCode].matched++;
+                                            }
+                                            
+                                            break; // Stop after first match
+                                        }
+                                    }
                                 }
 
-                                let newRow;
-                                if (arnPosition === 'first') {
-                                    newRow = [arn, ...row];
-                                } else {
-                                    newRow = [...row, arn];
-                                }
-                                
+                                const newRow = [arn, ...row];
                                 newData.push(newRow);
                                 totalProcessed++;
                             }
@@ -675,7 +920,7 @@
                 });
 
                 // Copy other sheets if they exist
-                updateProgress(80, 'Copying additional sheets...');
+                updateProgress(85, 'Copying additional sheets...');
                 poWorkbook.SheetNames.forEach(sheetName => {
                     if (!targetSheets.includes(sheetName)) {
                         const worksheet = poWorkbook.Sheets[sheetName];
@@ -683,7 +928,7 @@
                     }
                 });
 
-                updateProgress(90, 'Generating download file...');
+                updateProgress(95, 'Generating download file...');
 
                 // Generate file for download
                 const wbout = XLSX.write(newWorkbook, { bookType: 'xlsx', type: 'binary' });
@@ -695,7 +940,7 @@
                 // Show results
                 setTimeout(() => {
                     document.getElementById('progressSection').classList.remove('active');
-                    showResults(totalProcessed, totalMatched, processedSheets, warehouseStats, url);
+                    showResults(totalProcessed, totalMatched, processedSheets, warehouseStats, vendorStats, fileStats, url);
                 }, 500);
 
             } catch (error) {
@@ -704,16 +949,18 @@
             }
         }
 
-        function showResults(totalProcessed, totalMatched, processedSheets, warehouseStats, downloadUrl) {
+        function updateProgress(percentage, text) {
+            const progressSection = document.getElementById('progressSection');
+            progressSection.classList.add('active');
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+
+        function showResults(totalProcessed, totalMatched, processedSheets, warehouseStats, vendorStats, fileStats, downloadUrl) {
             const matchRate = totalProcessed > 0 ? ((totalMatched / totalProcessed) * 100).toFixed(1) : 0;
             
-            // Calculate warehouse-specific match rates
-            const unisMatchRate = warehouseStats.UNIS.processed > 0 ? 
-                ((warehouseStats.UNIS.matched / warehouseStats.UNIS.processed) * 100).toFixed(1) : 0;
-            const encoreMatchRate = warehouseStats.Encore.processed > 0 ? 
-                ((warehouseStats.Encore.matched / warehouseStats.Encore.processed) * 100).toFixed(1) : 0;
-            
-            document.getElementById('statsContainer').innerHTML = `
+            // Build stats HTML
+            let statsHTML = `
                 <div class="stat-card">
                     <div class="stat-number">${totalProcessed}</div>
                     <div class="stat-label">Total Records</div>
@@ -726,19 +973,44 @@
                     <div class="stat-number">${matchRate}%</div>
                     <div class="stat-label">Overall Match Rate</div>
                 </div>
-                <div class="stat-card" style="border-left-color: #e74c3c;">
-                    <div class="stat-number">${warehouseStats.UNIS.matched}/${warehouseStats.UNIS.processed}</div>
-                    <div class="stat-label">UNIS (${unisMatchRate}%)</div>
-                </div>
-                <div class="stat-card" style="border-left-color: #f39c12;">
-                    <div class="stat-number">${warehouseStats.Encore.matched}/${warehouseStats.Encore.processed}</div>
-                    <div class="stat-label">Encore (${encoreMatchRate}%)</div>
-                </div>
                 <div class="stat-card">
-                    <div class="stat-number">${processedSheets}</div>
-                    <div class="stat-label">Sheets Processed</div>
+                    <div class="stat-number">${shipmentsDataSets.length}</div>
+                    <div class="stat-label">Shipment Files Used</div>
                 </div>
             `;
+            
+            // Add warehouse stats
+            Object.keys(warehouseStats).forEach(warehouse => {
+                const stats = warehouseStats[warehouse];
+                if (stats.processed > 0) {
+                    const rate = ((stats.matched / stats.processed) * 100).toFixed(1);
+                    statsHTML += `
+                        <div class="stat-card" style="border-left-color: ${warehouse === 'UNIS' ? '#e74c3c' : '#f39c12'};">
+                            <div class="stat-number">${stats.matched}/${stats.processed}</div>
+                            <div class="stat-label">${warehouse} (${rate}%)</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Add vendor code stats if any were found
+            let hasVendorStats = false;
+            Object.keys(vendorStats).forEach(vendorCode => {
+                const stats = vendorStats[vendorCode];
+                if (stats.processed > 0) {
+                    hasVendorStats = true;
+                    const rate = ((stats.matched / stats.processed) * 100).toFixed(1);
+                    const channelName = VENDOR_CODES[vendorCode] || vendorCode;
+                    statsHTML += `
+                        <div class="stat-card" style="border-left-color: #3b82f6;">
+                            <div class="stat-number">${stats.matched}/${stats.processed}</div>
+                            <div class="stat-label">${channelName} (${rate}%)</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            document.getElementById('statsContainer').innerHTML = statsHTML;
 
             const downloadLink = document.getElementById('downloadLink');
             downloadLink.href = downloadUrl;
@@ -747,8 +1019,7 @@
 
             document.getElementById('resultsSection').classList.add('active');
             
-            const warehouseSummary = `UNIS: ${warehouseStats.UNIS.matched}/${warehouseStats.UNIS.processed} matched, Encore: ${warehouseStats.Encore.matched}/${warehouseStats.Encore.processed} matched`;
-            showSuccess(`Successfully processed ${totalProcessed} records with ${totalMatched} ARN matches! (${warehouseSummary})`);
+            showSuccess(`Successfully processed ${totalProcessed} records with ${totalMatched} ARN matches from ${shipmentsDataSets.length} shipment files!`);
         }
 
         // Utility function to convert string to array buffer
